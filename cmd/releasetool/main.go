@@ -4,7 +4,12 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
+
+	"github.com/lspaccatrosi16/go-cli-tools/input"
 )
 
 func main() {
@@ -23,12 +28,15 @@ func main() {
 	entries := crawlFolder(wd)
 
 	summary := []string{}
+	baseNames := map[string]bool{}
 
 	for _, ent := range entries {
 		ext := filepath.Ext(ent)
 		_, fileName := filepath.Split(ent)
 
 		withoutExt := fileName[:len(fileName)-len(ext)]
+
+		baseNames[withoutExt] = true
 
 		_, parentFolderName := filepath.Split(filepath.Dir(ent))
 
@@ -70,6 +78,79 @@ func main() {
 	for _, a := range summary {
 		fmt.Printf("%-40s OK\n", a)
 	}
+
+	cont, err := input.GetConfirmSelection("Create a release using gh")
+	if err != nil {
+		panic(err)
+	}
+
+	if !cont {
+		return
+	}
+
+	tag := input.GetValidatedInput("Git tag", func(in string) error {
+		s := strings.Split(in, ".")
+		if len(s) != 3 {
+			return fmt.Errorf("git tag must have 3 components, not %d", len(s))
+		}
+
+		for i, n := range s {
+			_, err := strconv.ParseInt(n, 10, 64)
+			if err != nil {
+				return fmt.Errorf("component %d is not an integer", i+1)
+			}
+		}
+		return nil
+	})
+
+	createCommandText := fmt.Sprintf("gh release create v%s --generate-notes", tag)
+
+	promptCmd(createCommandText, "Release create command")
+
+	genAssetStr := ""
+
+	for k := range baseNames {
+		genAssetStr += fmt.Sprintf("%s-* ", k)
+	}
+
+	uploadReleaseText := fmt.Sprintf("gh release upload v%s %s", tag, genAssetStr)
+
+	promptCmd(uploadReleaseText, "Upload assets command")
+
+}
+
+func promptCmd(cmd string, name string) {
+	fmt.Printf("%s:\n", name)
+	fmt.Println(cmd)
+	proceed, err := input.GetConfirmSelection("Execute command")
+	if err != nil {
+		panic(err)
+	}
+
+	if !proceed {
+		os.Exit(0)
+	}
+
+	err = doCmd(cmd)
+	if err != nil {
+		panic(err)
+	}
+
+}
+
+func doCmd(text string) error {
+	split := strings.Split(text, " ")
+	cmd := exec.Command(split[0], split[1:]...)
+
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	err := cmd.Run()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func crawlFolder(path string) []string {
