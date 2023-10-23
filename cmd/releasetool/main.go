@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -103,9 +102,6 @@ func main() {
 	})
 
 	createCommandText := fmt.Sprintf("gh release create v%s --generate-notes", tag)
-
-	promptCmd(createCommandText, "Release create command")
-
 	genAssetStr := ""
 
 	for k := range baseNames {
@@ -114,42 +110,10 @@ func main() {
 
 	uploadReleaseText := fmt.Sprintf("gh release upload v%s %s", tag, genAssetStr)
 
-	promptCmd(uploadReleaseText, "Upload assets command")
+	fmt.Println("Release commands:", "\n", "")
+	fmt.Println(createCommandText, "\n", "")
+	fmt.Println(uploadReleaseText)
 
-}
-
-func promptCmd(cmd string, name string) {
-	fmt.Printf("%s:\n", name)
-	fmt.Println(cmd)
-	proceed, err := input.GetConfirmSelection("Execute command")
-	if err != nil {
-		panic(err)
-	}
-
-	if !proceed {
-		os.Exit(0)
-	}
-
-	err = doCmd(cmd)
-	if err != nil {
-		panic(err)
-	}
-
-}
-
-func doCmd(text string) error {
-	split := strings.Split(text, " ")
-	cmd := exec.Command(split[0], split[1:]...)
-
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	err := cmd.Run()
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func crawlFolder(path string) []string {
