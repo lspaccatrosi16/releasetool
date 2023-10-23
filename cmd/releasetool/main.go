@@ -22,6 +22,8 @@ func main() {
 
 	entries := crawlFolder(wd)
 
+	summary := []string{}
+
 	for _, ent := range entries {
 		ext := filepath.Ext(ent)
 		_, fileName := filepath.Split(ent)
@@ -59,6 +61,14 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
+
+		summary = append(summary, newName)
+	}
+
+	fmt.Println("Prepared Release Assets:")
+
+	for _, a := range summary {
+		fmt.Printf("%-40s OK\n", a)
 	}
 }
 
