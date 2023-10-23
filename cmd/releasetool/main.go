@@ -36,8 +36,6 @@ func main() {
 
 		withoutExt := fileName[:len(fileName)-len(ext)]
 
-		baseNames[withoutExt] = true
-
 		_, parentFolderName := filepath.Split(filepath.Dir(ent))
 
 		if parentFolderName == "out" {
@@ -45,6 +43,7 @@ func main() {
 		}
 
 		newName := fmt.Sprintf("%s-%s%s", withoutExt, parentFolderName, ext)
+		baseNames[newName] = true
 
 		src, err := os.Open(ent)
 
@@ -110,7 +109,7 @@ func main() {
 	genAssetStr := ""
 
 	for k := range baseNames {
-		genAssetStr += fmt.Sprintf("%s-* ", k)
+		genAssetStr += fmt.Sprintf("%s ", k)
 	}
 
 	uploadReleaseText := fmt.Sprintf("gh release upload v%s %s", tag, genAssetStr)
