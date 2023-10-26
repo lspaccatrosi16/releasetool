@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -8,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/cli/go-gh"
 	"github.com/lspaccatrosi16/go-cli-tools/input"
 )
 
@@ -101,18 +103,47 @@ func main() {
 		return nil
 	})
 
-	createCommandText := fmt.Sprintf("gh release create v%s --generate-notes", tag)
+	createCommandText := fmt.Sprintf("release create v%s --generate-notes", tag)
 	genAssetStr := ""
 
 	for k := range baseNames {
-		genAssetStr += fmt.Sprintf("%s ", k)
+		genAssetStr += fmt.Sprintf("\"%s\" ", k)
 	}
 
-	uploadReleaseText := fmt.Sprintf("gh release upload v%s %s", tag, genAssetStr)
+	uploadReleaseText := fmt.Sprintf("release upload v%s %s", tag, genAssetStr)
 
 	fmt.Println("Release commands:", "\n", "")
-	fmt.Println(createCommandText, "\n", "")
-	fmt.Println(uploadReleaseText)
+	fmt.Println("gh "+createCommandText, "\n", "")
+	fmt.Println("gh " + uploadReleaseText)
+
+	proceed, err := input.GetConfirmSelection("Enact release?")
+	if err != nil {
+		panic(err)
+	}
+
+	if !proceed {
+		return
+	}
+
+	var stdout, stderr bytes.Buffer
+
+	stdout, stderr, err = gh.Exec(strings.Split(createCommandText, " ")...)
+
+	if err != nil {
+		fmt.Println(stderr.String())
+		panic(err)
+	}
+
+	fmt.Println(stdout.String())
+
+	stdout, stderr, err = gh.Exec(strings.Split(uploadReleaseText, " ")...)
+
+	if err != nil {
+		fmt.Println(stderr.String())
+		panic(err)
+	}
+
+	fmt.Println(stdout.String())
 
 }
 
