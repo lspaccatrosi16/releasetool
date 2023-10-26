@@ -1,15 +1,14 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 
-	"github.com/cli/go-gh"
 	"github.com/lspaccatrosi16/go-cli-tools/input"
 )
 
@@ -103,47 +102,36 @@ func main() {
 		return nil
 	})
 
-	createCommandText := fmt.Sprintf("release create v%s --generate-notes", tag)
+	createCommandText := fmt.Sprintf("gh release create v%s --generate-notes", tag)
 	genAssetStr := ""
 
 	for k := range baseNames {
-		genAssetStr += fmt.Sprintf("\"%s\" ", k)
+		genAssetStr += fmt.Sprintf("\"%s\" ", filepath.Join(wd, k))
 	}
 
-	uploadReleaseText := fmt.Sprintf("release upload v%s %s", tag, genAssetStr)
+	uploadReleaseText := fmt.Sprintf("gh release upload v%s %s", tag, genAssetStr)
+
+	if err != nil {
+		panic(err)
+	}
 
 	fmt.Println("Release commands:", "\n", "")
-	fmt.Println("gh "+createCommandText, "\n", "")
-	fmt.Println("gh " + uploadReleaseText)
-
-	proceed, err := input.GetConfirmSelection("Enact release?")
+	fmt.Println(createCommandText+":", "\n", "")
+	cmd := exec.Command("bash", "-c", createCommandText)
+	err = cmd.Run()
 	if err != nil {
 		panic(err)
 	}
 
-	if !proceed {
-		return
-	}
-
-	var stdout, stderr bytes.Buffer
-
-	stdout, stderr, err = gh.Exec(strings.Split(createCommandText, " ")...)
-
+	fmt.Println(uploadReleaseText+":", "\n", "")
+	cmd = exec.Command("bash", "-c", uploadReleaseText)
+	err = cmd.Run()
 	if err != nil {
-		fmt.Println(stderr.String())
 		panic(err)
+
 	}
 
-	fmt.Println(stdout.String())
-
-	stdout, stderr, err = gh.Exec(strings.Split(uploadReleaseText, " ")...)
-
-	if err != nil {
-		fmt.Println(stderr.String())
-		panic(err)
-	}
-
-	fmt.Println(stdout.String())
+	fmt.Println("Assets uploaded successfully")
 
 }
 
